@@ -4,6 +4,7 @@
 import os
 import subprocess
 import shutil
+import distutils.spawn
 
 from .core.utils import (
     check_input,
@@ -15,13 +16,13 @@ from .core.utils import (
 
 from .output import Results
 from .input import AutoTRIM, TRIMInput, SRInput
- 
+
 
 SRIM_DIRECTORY = os.path.join(os.sep, 'tmp', 'srim')
 
 
 class SRIMSettings(object):
-    """ SRIM Settings 
+    """ SRIM Settings
 
     TODO: Readonly becuase I have not constructed getter and setters
     """
@@ -32,7 +33,7 @@ class SRIMSettings(object):
             'autosave': check_input(int, is_zero_or_one, args.get('autosave', 0)),
             'plot_mode': check_input(int, is_zero_to_five, args.get('plot_mode', 5)),
             'plot_xmin': check_input(float, is_positive, args.get('plot_xmin', 0.0)),
-            'plot_xmax': check_input(float, is_positive, args.get('plot_xmax', 0.0)), 
+            'plot_xmax': check_input(float, is_positive, args.get('plot_xmax', 0.0)),
             'ranges': check_input(int, is_zero_or_one, args.get('ranges', 0)),
             'backscattered': check_input(int, is_zero_or_one, args.get('backscattered', 0)),
             'transmit': check_input(int, is_zero_or_one, args.get('transmit', 0)),
@@ -57,7 +58,7 @@ class SRIM(object):
 
     """
     def __init__(self, target, ion, calculation=1, number_ions=1000, **args):
-        """ Initialize srim object with settings 
+        """ Initialize srim object with settings
 
         TODO: fill out doc strings
         """
@@ -76,7 +77,7 @@ class SRIM(object):
     @staticmethod
     def copy_output_files(src_directory, dest_directory, check_srim_output=True):
         known_files = {
-            'TRIM.IN', 'PHONON.txt', 'E2RECOIL.txt', 'IONIZ.txt', 
+            'TRIM.IN', 'PHONON.txt', 'E2RECOIL.txt', 'IONIZ.txt',
             'LATERAL.txt', 'NOVAC.txt', 'RANGE.txt', 'VACANCY.txt',
             'COLLISION.txt', 'BACKSCAT.txt', 'SPUTTER.txt',
             'RANGE_3D.txt', 'TRANSMIT.txt', 'TRIMOUT.txt'
@@ -103,9 +104,13 @@ class SRIM(object):
         os.chdir(srim_directory)
         self._write_input_files()
         # Make sure compatible with Windows, OSX, and Linux
-        subprocess.check_call([str(os.path.join('.', 'TRIM.exe'))])
+        # If 'wine' command exists use it to launch TRIM
+        if distutils.spawn.find_executable("wine") :
+            subprocess.check_call(['wine', str(os.path.join('.', 'TRIM.exe'))])
+        else :
+            subprocess.check_call([str(os.path.join('.', 'TRIM.exe'))])
         os.chdir(current_directory)
-        
+
         return Results(srim_directory)
 
 
@@ -121,7 +126,7 @@ class SRSettings(object):
 
     def __getattr__(self, attr):
         return self._settings[attr]
-    
+
 
 class SR(object):
     """ Automate SR Calculations """
@@ -139,5 +144,9 @@ class SR(object):
         os.chdir(os.path.join(srim_directory, 'SR Module'))
         self._write_input_file()
         # Make sure compatible with Windows, OSX, and Linux
-        subprocess.check_call([str(os.path.join('.', 'SRModule.exe'))])
+        # If 'wine' command exists use it to launch TRIM
+        if distutils.spawn.find_executable("wine") :
+            subprocess.check_call(['wine', str(os.path.join('.', 'SRModule.exe'))])
+        else :
+            subprocess.check_call([str(os.path.join('.', 'SRModule.exe'))])
         os.chdir(current_directory)
